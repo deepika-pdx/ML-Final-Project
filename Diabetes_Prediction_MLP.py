@@ -1,7 +1,9 @@
 import math
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from sklearn.metrics import ConfusionMatrixDisplay
 from sklearn.model_selection import train_test_split
 from xlwt import Workbook
 
@@ -9,8 +11,11 @@ from xlwt import Workbook
 wb = Workbook()
 output_excel = wb.add_sheet('Sheet 1')
 
+# Reading the data from the csv file
 rawdata = pd.read_csv('Diabetics_Prediction_Dataset/diabetes.csv')
 df = rawdata[['diabetes']].copy()
+
+# Normalizing the rawdata
 df["diabetes"].replace(["No diabetes", "Diabetes"], [0, 1], inplace=True)
 dummies = pd.get_dummies(rawdata.gender)
 df = pd.concat([df, dummies], axis='columns')
@@ -19,35 +24,24 @@ colsToNormalize = ["cholesterol", "glucose", "hdl_chol", "chol_hdl_ratio", "age"
 for i in range(0, len(colsToNormalize)):
     df[colsToNormalize[i]] = (rawdata[colsToNormalize[i]] - rawdata[colsToNormalize[i]].mean()) / rawdata[
         colsToNormalize[i]].std(ddof=False)
-
 df["male"] = (df["male"] - df["male"].mean()) / df["male"].std(ddof=False)
 df["female"] = (df["female"] - df["female"].mean()) / df["female"].std(ddof=False)
 
-train, test = train_test_split(df, test_size=0.2)
-
+# Splitting the data into training and testing
 Y_col = 'diabetes'
 X_cols = df.loc[:, df.columns != Y_col].columns
 X_train, X_test, y_train, y_test = train_test_split(df[X_cols], df[Y_col], test_size=0.2)
 
-# print(len(X_train))
-# print(len(X_train.columns))
-# print(len(X_test))
-# print(len(X_test.columns))
-
+# Converting the dataframes into numpy aarays
 X_train = X_train.to_numpy()
 X_test = X_test.to_numpy()
 y_train = y_train.to_numpy()
 y_test = y_test.to_numpy()
 
-# print(len(X_train))
-# print(len(X_train[0]))
-# print(len(X_test))
-# print(len(X_test[0]))
-
 # Generating random initial weights for hidden layer
 # Number of hidden neurons were changed for mentioned variations
-op_dimensions = (10, 21)
-hidden_dimensions = (20, 15)
+op_dimensions = (10, 16)
+hidden_dimensions = (15, 15)
 initial_weights_hidden = np.random.uniform(-0.05, 0.05, size=hidden_dimensions)
 # Generating random initial weights for output layer
 initial_weights_output = np.random.uniform(-0.05, 0.05, size=op_dimensions)
@@ -63,15 +57,18 @@ def calc_sigmoid(dot_product):
 
 
 # Passing the values to the perceptron
-eta = 0.1
+eta = 0.01
 alpha = 0.9
 epoch = 50
+epoch_check = 49
+total_training_samples = 312
+total_testing_samples = 78
+
+# -----------------Training the network--------------------------------------
 for e in range(epoch):
     training_index = 0
     previous_wt_updates_output = np.zeros(op_dimensions)
     previous_wt_updates_hidden = np.zeros(hidden_dimensions)
-
-    # -----------------Training the network--------------------------------------
 
     for data in X_train:
         # Forward Phase part 1 i.e. from input to hidden layer
@@ -157,7 +154,6 @@ for e in range(epoch):
     previous_wt_updates_hidden = np.zeros(hidden_dimensions)
     correct_prediction = 0
     wrong_prediction = 0
-    total_samples = 312
     for data in X_train:
         # Forward Phase part 1 i.e. from input to hidden layer
         h = calc_sigmoid(np.dot(data, np.transpose(initial_weights_hidden)))
@@ -185,7 +181,7 @@ for e in range(epoch):
         else:
             wrong_prediction = wrong_prediction + 1
             training_index = training_index + 1
-    training_accuracy = (correct_prediction / total_samples) * 100
+    training_accuracy = (correct_prediction / total_training_samples) * 100
     output_excel.write(e, 0, training_accuracy)
 
     # -------------------------------Testing the trained network on testing samples-----------------------------------
@@ -195,9 +191,8 @@ for e in range(epoch):
     wrong_prediction = 0
     previous_wt_updates_output = np.zeros(op_dimensions)
     previous_wt_updates_hidden = np.zeros(hidden_dimensions)
-    total_samples = 78
     cm_dimensions = (2, 2)
-    if e == 49:
+    if e == epoch_check:
         confusion_matrix = np.zeros(cm_dimensions)
     for data in X_test:
         # Forward Phase part 1 i.e. from input to hidden layer
@@ -229,7 +224,7 @@ for e in range(epoch):
             # print("target matched")
             correct_prediction = correct_prediction + 1
             testing_index = testing_index + 1
-            if e == 49:
+            if e == epoch_check:
                 for i in range(0, 2):
                     for j in range(0, 2):
                         if i == j == actual_value:
@@ -239,16 +234,24 @@ for e in range(epoch):
         else:
             wrong_prediction = wrong_prediction + 1
             testing_index = testing_index + 1
-            if e == 49:
+            if e == epoch_check:
                 for i in range(0, 2):
                     for j in range(0, 2):
                         if i == actual_value and j == predicted_value:
                             confusion_matrix[i][j] = confusion_matrix[i][j] + 1
                         else:
                             continue
-    testing_accuracy = (correct_prediction / total_samples) * 100
+    testing_accuracy = (correct_prediction / total_testing_samples) * 100
     output_excel.write(e, 1, testing_accuracy)
-    if e == 49:
+    if e == epoch_check:
+        print(e)
+        print("Epoch: " + str(e))
         print("Confusion matrix:  " + str(confusion_matrix))
+        print(testing_accuracy)
 
 wb.save('xlwt example.xls')
+print("Visulization of confusion matrix")
+display = ConfusionMatrixDisplay(confusion_matrix=confusion_matrix)
+display.plot()
+plt.show()
+plt.close()
