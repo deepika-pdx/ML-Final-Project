@@ -59,8 +59,8 @@ def calc_sigmoid(dot_product):
 # Passing the values to the perceptron
 eta = 0.01
 alpha = 0.9
-epoch = 50
-epoch_check = 49
+epoch = 20
+epoch_check = 19
 total_training_samples = 312
 total_testing_samples = 78
 
@@ -250,6 +250,21 @@ for e in range(epoch):
         print(testing_accuracy)
 
 wb.save('xlwt example.xls')
+
+# TP = True Positive, TN = True Negative, FP = False Positive, FN = False Negative
+TP = confusion_matrix[1, 1]
+TN = confusion_matrix[0, 0]
+FP = confusion_matrix[0, 1]
+FN = confusion_matrix[1, 0]
+
+accuracy = (TP + TN) / (TP + TN + FP + FN)
+precision = TP / (TP + FP)
+recall = TP / (TP + FN)
+
+print("Accuracy : %.2f" % accuracy)
+print("Precision : %.2f" % precision)
+print("Recall : %.2f" % recall)
+
 print("Visulization of confusion matrix")
 display = ConfusionMatrixDisplay(confusion_matrix=confusion_matrix)
 display.plot()
